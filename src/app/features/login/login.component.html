@@ -1,20 +1,21 @@
 <main class="login-shell">
   <section class="login-card">
     <a class="brand" href="/"> <span class="mark">GR</span> GameRecordHub </a>
-    <p class="eyebrow">Your board game history</p>
-    <h1>Every game night<br>has a story.</h1>
-    <p class="intro">Calculate scores accurately, save finished games, and revisit your results anytime.</p>
+    <app-locale-select />
+    <p class="eyebrow">{{ 'Your board game history' | translate }}</p>
+    <h1 [innerHTML]="'Every game night<br>has a story.' | translate"></h1>
+    <p class="intro">{{ 'Calculate scores accurately, save finished games, and revisit your results anytime.' | translate }}</p>
     <button class="google-button" type="button" (click)="signIn()" [disabled]="auth.busy() || !auth.initialized()">
       <span class="google-g">G</span>
-      {{ auth.busy() ? 'Connecting…' : 'Continue with Google' }}
+      {{ (auth.busy() ? 'Connecting…' : 'Continue with Google') | translate }}
     </button>
     @if (auth.error(); as error) { <p class="error" role="alert">{{ error }}</p> }
-    <a class="guest-link" href="/games">Continue without an account — calculate scores only</a>
-    <p class="privacy">Your records are private and belong to your account.</p>
+    <a class="guest-link" href="/games">{{ 'Continue without an account — calculate scores only' | translate }}</a>
+    <p class="privacy">{{ 'Your records are private and belong to your account.' | translate }}</p>
   </section>
   <aside class="art" aria-hidden="true">
     <div class="game-card c1"><b>Lost Cities</b><span>◆</span></div>
-    <div class="game-card c2"><b>Victory awaits</b><span>♛</span></div>
+    <div class="game-card c2"><b>{{ 'Victory awaits' | translate }}</b><span>♛</span></div>
     <div class="meeple m1"></div><div class="meeple m2"></div><div class="meeple m3"></div>
   </aside>
 </main>

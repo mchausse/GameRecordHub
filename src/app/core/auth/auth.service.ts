@@ -9,10 +9,12 @@ import {
 } from 'firebase/auth';
 
 import { auth, firebaseAuthApi, firebaseFirestoreApi, firestore } from '../firebase/firebase';
+import { I18nService } from '../i18n/i18n.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly router = inject(Router);
+  private readonly i18n = inject(I18nService);
   private readonly _user = signal<User | null>(null);
   private readonly _initialized = signal(false);
   private readonly _busy = signal(false);
@@ -88,14 +90,14 @@ export class AuthService {
     if (error instanceof FirebaseError) {
       switch (error.code) {
         case 'auth/popup-closed-by-user':
-          return 'Sign-in was cancelled.';
+          return this.i18n.translate('Sign-in was cancelled.');
         case 'auth/unauthorized-domain':
-          return 'This domain is not authorized for Google Sign-in.';
+          return this.i18n.translate('This domain is not authorized for Google Sign-in.');
         default:
-          return 'Unable to sign in right now. Please try again.';
+          return this.i18n.translate('Unable to sign in right now. Please try again.');
       }
     }
 
-    return 'Something went wrong. Please try again.';
+    return this.i18n.translate('Something went wrong. Please try again.');
   }
 }

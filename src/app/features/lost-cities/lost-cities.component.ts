@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { GameRecordsService } from '../../core/games/game-records.service';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import {
   CARD_VALUES,
   ExpeditionId,
@@ -16,7 +18,7 @@ import {
 
 @Component({
   selector: 'app-lost-cities',
-  imports: [FormsModule],
+  imports: [FormsModule, TranslatePipe],
   templateUrl: './lost-cities.component.html',
   styleUrl: './lost-cities.component.scss',
 })
@@ -24,6 +26,7 @@ export class LostCitiesComponent {
   private readonly records = inject(GameRecordsService);
   private readonly router = inject(Router);
   readonly auth = inject(AuthService);
+  readonly i18n = inject(I18nService);
 
   readonly expeditionCount = signal<LostCitiesExpeditionCount>(5);
   readonly expeditions = computed(() => expeditionsForCount(this.expeditionCount()));
@@ -85,7 +88,7 @@ export class LostCitiesComponent {
   async saveGame(): Promise<void> {
     const names = this.playerNames.map((name) => name.trim());
     if (names.some((name) => !name)) {
-      this.error.set('Enter both player names before saving.');
+      this.error.set(this.i18n.translate('Enter both player names before saving.'));
       return;
     }
 
@@ -105,7 +108,9 @@ export class LostCitiesComponent {
       });
       await this.router.navigateByUrl('/history');
     } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Unable to save this game.');
+      this.error.set(
+        error instanceof Error ? this.i18n.translate(error.message) : this.i18n.translate('Unable to save this game.'),
+      );
     } finally {
       this.saving.set(false);
     }
