@@ -8,6 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:ci": "ng test --watch=false --browsers=ChromeHeadless",
+    "test:coverage": "ng test --watch=false --browsers=ChromeHeadless --code-coverage",
     "predeploy": "npm run test:ci && npm run build",
     "deploy": "npx -y firebase-tools@latest deploy --only hosting,firestore:rules --project gamerecordhub-ce47c"
   },

@@ -25,8 +25,31 @@ Open `http://localhost:4200`. Google Sign-in and `localhost` are configured as a
 
 ```bash
 npm run build
-npm test -- --watch=false --browsers=ChromeHeadless
+npm run test:ci
+npm run test:coverage
 ```
+
+## Code quality and test coverage
+
+The `sonarcloud.yml` GitHub Actions workflow runs the tests, produces LCOV line
+coverage, builds the app, and sends the result to SonarQube Cloud. The SonarQube
+Cloud Free plan analyzes public GitHub repositories for bugs, vulnerabilities,
+code smells, technical debt, and test coverage.
+
+Complete these one-time steps before the first workflow run:
+
+1. Ensure the GitHub repository is public.
+2. Import `mchausse/GameRecordHub` into a SonarQube Cloud organization with the
+   SonarQube Cloud GitHub integration.
+3. Choose **With GitHub Actions** as the analysis method and enable secretless
+   analysis under **Organization settings > Analysis**. The workflow uses GitHub
+   OIDC, so no `SONAR_TOKEN` secret is required.
+4. Disable Automatic Analysis for the project so CI-based analysis can import
+   the LCOV report.
+
+SonarQube Cloud calculates technical debt from code smells and reports both
+covered and uncovered source lines. Generated reports in `coverage/` are not
+committed.
 
 ## Deploy Firebase resources
 

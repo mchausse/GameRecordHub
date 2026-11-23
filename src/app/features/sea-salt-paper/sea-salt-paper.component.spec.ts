@@ -54,6 +54,35 @@ describe('SeaSaltPaperComponent', () => {
     expect(component.isComplete).toBeTrue();
   });
 
+  it('updates names and normalizes non-finite scores to zero', () => {
+    component.updateName(1, 'Grace');
+    component.updateScore(0, 0, Number.NaN);
+
+    expect(component.playerNames()[1]).toBe('Grace');
+    expect(component.rounds()[0][0]).toBe(0);
+  });
+
+  it('limits the score sheet to twenty rounds and removes rounds safely', () => {
+    component.rounds.set(Array.from({ length: 20 }, () => [0, 0, 0, 0]));
+    component.addRound();
+    expect(component.rounds()).toHaveSize(20);
+
+    component.rounds.set([[1, 2, 3, 4]]);
+    component.removeRound();
+    expect(component.rounds()).toHaveSize(1);
+
+    component.addRound();
+    component.removeRound();
+    expect(component.rounds()).toHaveSize(1);
+  });
+
+  it('reports the winner from active players', () => {
+    component.updatePlayerCount(3);
+    component.updateScore(0, 2, 35);
+
+    expect(component.winner).toBe('Player 3');
+  });
+
   it('saves a valid completed game and opens history', async () => {
     component.updateScore(0, 0, 40);
     await component.saveGame();
@@ -103,5 +132,43 @@ describe('SeaSaltPaperComponent', () => {
     await component.saveGame();
     expect(records.saveSeaSaltPaperGame).not.toHaveBeenCalled();
     expect(component.error()).toContain('40 points');
+  });
+
+  it('does not save an empty player name', async () => {
+    component.updateName(0, '  ');
+    component.updateScore(0, 0, 40);
+
+    await component.saveGame();
+
+    expect(records.saveSeaSaltPaperGame).not.toHaveBeenCalled();
+    expect(component.error()).toContain('every player name');
+  });
+
+  [
+    ['Missing or insufficient permissions', 'Firebase rejected this score sheet.'],
+    ['Nested arrays are not supported', 'Unable to save this score format.'],
+    ['Unexpected failure', 'Unable to save this game. Please try again.'],
+  ].forEach(([failure, message]) => {
+    it(`handles save failure: ${failure}`, async () => {
+      spyOn(console, 'error');
+      records.saveSeaSaltPaperGame.and.rejectWith(new Error(failure));
+      component.updateScore(0, 0, 40);
+
+      await component.saveGame();
+
+      expect(component.error()).toContain(message);
+      expect(component.saving()).toBeFalse();
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+  });
+
+  it('uses the generic save message for non-Error failures', async () => {
+    spyOn(console, 'error');
+    records.saveSeaSaltPaperGame.and.rejectWith('failed');
+    component.updateScore(0, 0, 40);
+
+    await component.saveGame();
+
+    expect(component.error()).toBe('Unable to save this game. Please try again.');
   });
 });

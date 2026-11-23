@@ -113,4 +113,30 @@ describe('LostCitiesComponent', () => {
       totals: { player1: 0, player2: -10 },
     }));
   });
+
+  it('does not save empty player names', async () => {
+    component.playerNames[0] = ' ';
+
+    await component.saveGame();
+
+    expect(records.saveLostCitiesGame).not.toHaveBeenCalled();
+    expect(component.error()).toContain('both player names');
+  });
+
+  it('surfaces a save error and clears the saving state', async () => {
+    records.saveLostCitiesGame.and.rejectWith(new Error('Storage unavailable'));
+
+    await component.saveGame();
+
+    expect(component.error()).toBe('Storage unavailable');
+    expect(component.saving()).toBeFalse();
+  });
+
+  it('uses a fallback for non-Error save failures', async () => {
+    records.saveLostCitiesGame.and.rejectWith('failed');
+
+    await component.saveGame();
+
+    expect(component.error()).toBe('Unable to save this game.');
+  });
 });

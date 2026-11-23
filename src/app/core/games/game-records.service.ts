@@ -1,16 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import {
   Timestamp,
-  addDoc,
-  collection,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
 } from 'firebase/firestore';
 
 import { AuthService } from '../auth/auth.service';
-import { firestore } from '../firebase/firebase';
+import { firebaseFirestoreApi, firestore } from '../firebase/firebase';
 import { LostCitiesExpeditionCount, SavedLostCitiesGame } from '../../features/lost-cities/lost-cities.models';
 import { SavedSeaSaltPaperGame, StoredSeaSaltRound, fromStoredSeaSaltRounds, toStoredSeaSaltRounds } from '../../features/sea-salt-paper/sea-salt-paper.models';
 
@@ -31,12 +25,13 @@ export class GameRecordsService {
     const winnerName = game.totals.player1 === game.totals.player2
       ? 'Tie'
       : game.totals.player1 > game.totals.player2 ? game.playerNames[0] : game.playerNames[1];
-    const reference = await addDoc(collection(firestore, 'users', user.uid, 'games'), {
+    const reference = await firebaseFirestoreApi.addDoc(
+      firebaseFirestoreApi.collection(firestore, 'users', user.uid, 'games'), {
       ...game,
       ownerUid: user.uid,
       winnerName,
-      createdAt: serverTimestamp(),
-      completedAt: serverTimestamp(),
+      createdAt: firebaseFirestoreApi.serverTimestamp(),
+      completedAt: firebaseFirestoreApi.serverTimestamp(),
     });
     return reference.id;
   }
@@ -46,13 +41,14 @@ export class GameRecordsService {
     if (!user) throw new Error('Sign in before saving a game.');
 
     const winnerName = this.seaSaltPaperWinner(game.playerNames, game.roundScores);
-    const reference = await addDoc(collection(firestore, 'users', user.uid, 'games'), {
+    const reference = await firebaseFirestoreApi.addDoc(
+      firebaseFirestoreApi.collection(firestore, 'users', user.uid, 'games'), {
       ...game,
       roundScores: toStoredSeaSaltRounds(game.roundScores),
       ownerUid: user.uid,
       winnerName,
-      createdAt: serverTimestamp(),
-      completedAt: serverTimestamp(),
+      createdAt: firebaseFirestoreApi.serverTimestamp(),
+      completedAt: firebaseFirestoreApi.serverTimestamp(),
     });
     return reference.id;
   }
@@ -61,9 +57,9 @@ export class GameRecordsService {
     const user = this.auth.user();
     if (!user) return [];
 
-    const result = await getDocs(query(
-      collection(firestore, 'users', user.uid, 'games'),
-      orderBy('completedAt', 'desc'),
+    const result = await firebaseFirestoreApi.getDocs(firebaseFirestoreApi.query(
+      firebaseFirestoreApi.collection(firestore, 'users', user.uid, 'games'),
+      firebaseFirestoreApi.orderBy('completedAt', 'desc'),
     ));
 
     return result.docs
