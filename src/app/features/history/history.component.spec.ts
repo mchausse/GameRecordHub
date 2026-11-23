@@ -78,6 +78,6 @@ describe('HistoryComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.tag').textContent).toContain('6 lanes');
+    expect(fixture.nativeElement.querySelector('.tag').textContent).toContain('6 expeditions');
   });
 });

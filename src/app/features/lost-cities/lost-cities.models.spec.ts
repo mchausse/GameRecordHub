@@ -1,7 +1,7 @@
 import { emptyRound, expeditionsForCount, scoreExpedition } from './lost-cities.models';
 
 describe('Lost Cities expedition scoring', () => {
-  it('provides five classic lanes with a white Himalayas expedition', () => {
+  it('provides five classic expeditions with white Himalayas', () => {
     const expeditions = expeditionsForCount(5);
     expect(expeditions.map(({ id }) => id)).toEqual(['yellow', 'blue', 'red', 'green', 'white']);
     expect(expeditions.some(({ id }) => id === 'purple')).toBeFalse();

@@ -14,7 +14,7 @@ class TestRouteComponent {}
 describe('AppComponent', () => {
   const authMock = {
     ready: Promise.resolve(),
-    user: signal(null),
+    user: signal<{ displayName: string } | null>(null),
     initialized: signal(true),
     busy: signal(false),
     error: signal(null),
@@ -23,6 +23,8 @@ describe('AppComponent', () => {
   };
 
   beforeEach(async () => {
+    authMock.user.set(null);
+    authMock.signOut.calls.reset();
     await TestBed.configureTestingModule({
       imports: [AppComponent],
       providers: [
@@ -48,6 +50,21 @@ describe('AppComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.app-bar')).not.toBeNull();
     expect(compiled.querySelector('.sign-in-link')?.textContent).toContain('Sign in to save');
+    expect(compiled.querySelector('app-locale-select')).not.toBeNull();
+    expect(compiled.querySelectorAll('nav a').length).toBe(1);
+  });
+
+  it('renders the history and sign-out actions for a signed-in user', () => {
+    authMock.user.set({ displayName: 'Test Player' });
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const signOut = compiled.querySelector<HTMLButtonElement>('.account button');
+
+    expect(compiled.querySelectorAll('nav a').length).toBe(2);
+    expect(signOut?.textContent).toContain('Sign out');
+    signOut?.click();
+    expect(authMock.signOut).toHaveBeenCalled();
   });
 
   it('hides the application shell on the login page', async () => {

@@ -56,7 +56,7 @@ describe('LostCitiesComponent', () => {
     expect(component.score('player1', 'green')).toBe(-10);
   });
 
-  it('uses five lanes by default and displays white instead of purple', () => {
+  it('uses five expeditions by default and displays white instead of purple', () => {
     const rows = fixture.nativeElement.querySelectorAll('.expedition-row');
     expect(component.expeditionCount()).toBe(5);
     expect(component.expeditions().map(({ id }) => id)).toContain('white');
@@ -66,7 +66,7 @@ describe('LostCitiesComponent', () => {
     expect(fixture.nativeElement.querySelector('.expedition-row.purple')).toBeNull();
   });
 
-  it('adds the purple lane to scores in six-lane mode', () => {
+  it('adds the purple expedition to scores in six-expedition mode', () => {
     component.toggleValue('player1', 'purple', 10);
     expect(component.roundTotal('player1')).toBe(0);
 
@@ -76,6 +76,22 @@ describe('LostCitiesComponent', () => {
     expect(component.expeditions().map(({ id }) => id)).toContain('purple');
     expect(component.roundTotal('player1')).toBe(-10);
     expect(fixture.nativeElement.querySelectorAll('.expedition-row').length).toBe(6);
+  });
+
+  ([5, 6] as const).forEach((expeditionCount) => {
+    it(`labels all score grids in ${expeditionCount}-lane mode`, () => {
+      component.selectExpeditionCount(expeditionCount);
+      fixture.detectChanges();
+      const entries = fixture.nativeElement.querySelectorAll(
+        '.expedition-row .player-entry',
+      ) as NodeListOf<HTMLElement>;
+
+      expect(entries.length).toBe(expeditionCount * 2);
+      entries.forEach((entry, index) => {
+        expect(entry.dataset['label']).toBe(index % 2 === 0 ? 'Player 1' : 'Player 2');
+        expect(entry.querySelectorAll('.numbers button').length).toBe(9);
+      });
+    });
   });
 
   it('preserves purple entries while the six-lane mode is disabled', () => {
