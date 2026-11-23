@@ -6,13 +6,9 @@ import {
 import {
   GoogleAuthProvider,
   User,
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
-import { auth, firestore } from '../firebase/firebase';
+import { auth, firebaseAuthApi, firebaseFirestoreApi, firestore } from '../firebase/firebase';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -27,7 +23,7 @@ export class AuthService {
   readonly busy = this._busy.asReadonly();
   readonly error = this._error.asReadonly();
   readonly ready = new Promise<void>((resolve) => {
-    onAuthStateChanged(auth, (user) => {
+    firebaseAuthApi.onAuthStateChanged(auth, (user) => {
       this._user.set(user);
       this._initialized.set(true);
       resolve();
@@ -43,7 +39,7 @@ export class AuthService {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      const { user } = await signInWithPopup(auth, provider);
+      const { user } = await firebaseAuthApi.signInWithPopup(auth, provider);
       await this.upsertUserProfile(user);
     } catch (error) {
       this._error.set(this.errorMessage(error));
@@ -57,7 +53,7 @@ export class AuthService {
     this._error.set(null);
 
     try {
-      await signOut(auth);
+      await firebaseAuthApi.signOut(auth);
       await this.router.navigateByUrl('/login');
     } catch (error) {
       this._error.set(this.errorMessage(error));
@@ -67,24 +63,24 @@ export class AuthService {
   }
 
   private async upsertUserProfile(user: User): Promise<void> {
-    const profileRef = doc(firestore, 'users', user.uid);
-    const snapshot = await getDoc(profileRef);
+    const profileRef = firebaseFirestoreApi.doc(firestore, 'users', user.uid);
+    const snapshot = await firebaseFirestoreApi.getDoc(profileRef);
     const profile = {
       uid: user.uid,
       displayName: user.displayName ?? 'Player',
       email: user.email ?? null,
       photoURL: user.photoURL,
-      updatedAt: serverTimestamp(),
+      updatedAt: firebaseFirestoreApi.serverTimestamp(),
     };
 
     if (snapshot.exists()) {
-      await updateDoc(profileRef, profile);
+      await firebaseFirestoreApi.updateDoc(profileRef, profile);
       return;
     }
 
-    await setDoc(profileRef, {
+    await firebaseFirestoreApi.setDoc(profileRef, {
       ...profile,
-      createdAt: serverTimestamp(),
+      createdAt: firebaseFirestoreApi.serverTimestamp(),
     });
   }
 
