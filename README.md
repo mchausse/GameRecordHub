@@ -64,11 +64,19 @@ npx -y firebase-tools@latest deploy --only hosting
 ## Features
 
 - Google Sign-in with a dedicated login page
+- Runtime language selection for Canadian/American/UK English, Canadian/European
+  French, Spanish, and German
 - Supported-games library for Lost Cities and Sea Salt & Paper
 - Official 2-player, 3-round Lost Cities score sheet
 - Sea Salt & Paper round table for 2–4 players with automatic totals
 - Automatic expedition scoring, including investment multipliers and the 8-card +20 bonus
 - Immutable completed-game history under the signed-in user's private `users/{uid}/games` collection
+
+Localization is centralized in `src/app/core/i18n/`: the service owns locale
+selection and formatting, while each language dictionary is maintained in its
+own typed file. The selected locale is persisted in local storage and regional
+date formatting uses the matching `Intl` locale. `en-UK` is accepted as an alias
+for the standard `en-GB` identifier.
 
 ### Lost Cities scoring
 

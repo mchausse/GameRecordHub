@@ -3,10 +3,12 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs';
 
 import { AuthService } from './core/auth/auth.service';
+import { LocaleSelectComponent } from './core/i18n/locale-select.component';
+import { TranslatePipe } from './core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [LocaleSelectComponent, RouterLink, RouterLinkActive, RouterOutlet, TranslatePipe],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })

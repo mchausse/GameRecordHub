@@ -3,17 +3,18 @@
 } @else {
   <header class="app-bar">
     <a class="brand" routerLink="/games"><span>GR</span> GameRecordHub</a>
-    <nav aria-label="Main navigation">
-      <a routerLink="/games" routerLinkActive="active">Games</a>
-      @if (auth.user()) { <a routerLink="/history" routerLinkActive="active">History</a> }
+    <nav [attr.aria-label]="'Main navigation' | translate">
+      <a routerLink="/games" routerLinkActive="active">{{ 'Games' | translate }}</a>
+      @if (auth.user()) { <a routerLink="/history" routerLinkActive="active">{{ 'History' | translate }}</a> }
     </nav>
     <div class="account">
       @if (auth.user(); as user) {
         <span class="user-name">{{ user.displayName || 'Player' }}</span>
-        <button type="button" (click)="auth.signOut()" [disabled]="auth.busy()">Sign out</button>
+        <button type="button" (click)="auth.signOut()" [disabled]="auth.busy()">{{ 'Sign out' | translate }}</button>
       } @else {
-        <a class="sign-in-link" routerLink="/login">Sign in to save</a>
+        <a class="sign-in-link" routerLink="/login">{{ 'Sign in to save' | translate }}</a>
       }
+      <app-locale-select />
     </div>
   </header>
   <main class="app-content">
