@@ -1,0 +1,142 @@
+rules_version = '2';
+
+// Prototype data model:
+// users/{uid}: private Firebase profile with uid, displayName (1-100), optional
+// email (<=254), optional HTTPS photoURL (<=2048), and immutable createdAt.
+// users/{uid}/games/{gameId}: private immutable completed game with ownerUid,
+// bounded player names and round/total scores, a validated winner, and server
+// timestamps. Lost Cities requires 2 players/3 rounds; Sea Salt & Paper permits
+// 2-4 players and 1-20 manually entered rounds.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() { return request.auth != null; }
+    function isOwner(uid) { return isAuthenticated() && request.auth.uid == uid; }
+    function isValidUser(data, uid) {
+      return data.keys().hasOnly(['uid','displayName','email','photoURL','createdAt','updatedAt'])
+        && data.keys().hasAll(['uid','displayName','email','photoURL','createdAt','updatedAt'])
+        && data.uid == uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
+        && (data.email == null || (data.email is string && data.email.size() <= 254
+          && data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')))
+        && (data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 2048
+          && data.photoURL.matches('^https://.*')))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+    function isScorePair(score, minScore, maxScore) {
+      return score is map
+        && score.keys().hasOnly(['player1','player2'])
+        && score.keys().hasAll(['player1','player2'])
+        && score.player1 is number && score.player1 >= minScore && score.player1 <= maxScore
+        && score.player2 is number && score.player2 >= minScore && score.player2 <= maxScore;
+    }
+    function isValidLostCitiesGame(data, uid) {
+      return data.keys().hasOnly(['ownerUid','gameSlug','expeditionCount','playerNames','roundScores','totals','winnerName','createdAt','completedAt'])
+        && data.keys().hasAll(['ownerUid','gameSlug','expeditionCount','playerNames','roundScores','totals','winnerName','createdAt','completedAt'])
+        && data.ownerUid == uid
+        && data.gameSlug == 'lost-cities'
+        && (data.expeditionCount == 5 || data.expeditionCount == 6)
+        && data.playerNames is list && data.playerNames.size() == 2
+        && data.playerNames[0] is string && data.playerNames[0].size() >= 1 && data.playerNames[0].size() <= 50
+        && data.playerNames[1] is string && data.playerNames[1].size() >= 1 && data.playerNames[1].size() <= 50
+        && (data.winnerName == 'Tie' || data.winnerName == data.playerNames[0] || data.winnerName == data.playerNames[1])
+        && data.roundScores is list && data.roundScores.size() == 3
+        && isScorePair(data.roundScores[0], data.expeditionCount == 5 ? -400 : -480, 1000)
+        && isScorePair(data.roundScores[1], data.expeditionCount == 5 ? -400 : -480, 1000)
+        && isScorePair(data.roundScores[2], data.expeditionCount == 5 ? -400 : -480, 1000)
+        && isScorePair(data.totals, data.expeditionCount == 5 ? -1200 : -1440, 3000)
+        && data.totals.player1 == data.roundScores[0].player1 + data.roundScores[1].player1 + data.roundScores[2].player1
+        && data.totals.player2 == data.roundScores[0].player2 + data.roundScores[1].player2 + data.roundScores[2].player2
+        && ((data.totals.player1 > data.totals.player2 && data.winnerName == data.playerNames[0])
+          || (data.totals.player2 > data.totals.player1 && data.winnerName == data.playerNames[1])
+          || (data.totals.player1 == data.totals.player2 && data.winnerName == 'Tie'))
+        && data.createdAt is timestamp && data.createdAt == request.time
+        && data.completedAt is timestamp && data.completedAt == request.time;
+    }
+
+    function isValidNameList(names) {
+      return names is list && names.size() >= 2 && names.size() <= 4
+        && names[0] is string && names[0].size() >= 1 && names[0].size() <= 50
+        && names[1] is string && names[1].size() >= 1 && names[1].size() <= 50
+        && (names.size() < 3 || (names[2] is string && names[2].size() >= 1 && names[2].size() <= 50))
+        && (names.size() < 4 || (names[3] is string && names[3].size() >= 1 && names[3].size() <= 50));
+    }
+    function isValidTotalList(totals, playerCount) {
+      return totals is list && totals.size() == playerCount
+        && totals[0] is number && totals[0] >= 0 && totals[0] <= 2000
+        && totals[1] is number && totals[1] >= 0 && totals[1] <= 2000
+        && (playerCount < 3 || (totals[2] is number && totals[2] >= 0 && totals[2] <= 2000))
+        && (playerCount < 4 || (totals[3] is number && totals[3] >= 0 && totals[3] <= 2000));
+    }
+    function isValidSeaSaltRound(round, playerCount) {
+      return round is map
+        && round.keys().hasOnly(['scores'])
+        && round.scores is list
+        && round.scores.size() == playerCount
+        && round.scores.size() >= 2
+        && round.scores.size() <= 4;
+    }
+    function areValidSeaSaltRounds(rounds, playerCount) {
+      return rounds is list && rounds.size() >= 1 && rounds.size() <= 20
+        && isValidSeaSaltRound(rounds[0], playerCount)
+        && (rounds.size() < 2 || isValidSeaSaltRound(rounds[1], playerCount))
+        && (rounds.size() < 3 || isValidSeaSaltRound(rounds[2], playerCount))
+        && (rounds.size() < 4 || isValidSeaSaltRound(rounds[3], playerCount))
+        && (rounds.size() < 5 || isValidSeaSaltRound(rounds[4], playerCount))
+        && (rounds.size() < 6 || isValidSeaSaltRound(rounds[5], playerCount))
+        && (rounds.size() < 7 || isValidSeaSaltRound(rounds[6], playerCount))
+        && (rounds.size() < 8 || isValidSeaSaltRound(rounds[7], playerCount))
+        && (rounds.size() < 9 || isValidSeaSaltRound(rounds[8], playerCount))
+        && (rounds.size() < 10 || isValidSeaSaltRound(rounds[9], playerCount))
+        && (rounds.size() < 11 || isValidSeaSaltRound(rounds[10], playerCount))
+        && (rounds.size() < 12 || isValidSeaSaltRound(rounds[11], playerCount))
+        && (rounds.size() < 13 || isValidSeaSaltRound(rounds[12], playerCount))
+        && (rounds.size() < 14 || isValidSeaSaltRound(rounds[13], playerCount))
+        && (rounds.size() < 15 || isValidSeaSaltRound(rounds[14], playerCount))
+        && (rounds.size() < 16 || isValidSeaSaltRound(rounds[15], playerCount))
+        && (rounds.size() < 17 || isValidSeaSaltRound(rounds[16], playerCount))
+        && (rounds.size() < 18 || isValidSeaSaltRound(rounds[17], playerCount))
+        && (rounds.size() < 19 || isValidSeaSaltRound(rounds[18], playerCount))
+        && (rounds.size() < 20 || isValidSeaSaltRound(rounds[19], playerCount));
+    }
+    function isValidSeaSaltPaperGame(data, uid) {
+      return data.keys().hasOnly(['ownerUid','gameSlug','playerNames','roundScores','totals','targetScore','winnerName','createdAt','completedAt'])
+        && data.keys().hasAll(['ownerUid','gameSlug','playerNames','roundScores','totals','targetScore','winnerName','createdAt','completedAt'])
+        && data.ownerUid == uid
+        && data.gameSlug == 'sea-salt-paper'
+        && isValidNameList(data.playerNames)
+        && areValidSeaSaltRounds(data.roundScores, data.playerNames.size())
+        && isValidTotalList(data.totals, data.playerNames.size())
+        && data.targetScore == (data.playerNames.size() == 2 ? 40 : (data.playerNames.size() == 3 ? 35 : 30))
+        && (data.totals[0] >= data.targetScore || data.totals[1] >= data.targetScore
+          || (data.playerNames.size() >= 3 && data.totals[2] >= data.targetScore)
+          || (data.playerNames.size() == 4 && data.totals[3] >= data.targetScore))
+        && (data.winnerName == 'Tie' || data.winnerName == data.playerNames[0]
+          || data.winnerName == data.playerNames[1]
+          || (data.playerNames.size() >= 3 && data.winnerName == data.playerNames[2])
+          || (data.playerNames.size() == 4 && data.winnerName == data.playerNames[3]))
+        && data.createdAt is timestamp && data.createdAt == request.time
+        && data.completedAt is timestamp && data.completedAt == request.time;
+    }
+
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid) && isValidUser(request.resource.data, uid)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(uid) && isValidUser(request.resource.data, uid)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.uid == resource.data.uid;
+
+      match /games/{gameId} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) &&
+          (isValidLostCitiesGame(request.resource.data, uid) || isValidSeaSaltPaperGame(request.resource.data, uid));
+        allow update: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

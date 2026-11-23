@@ -1,0 +1,30 @@
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Game library</p>
+    <h1>Choose your next adventure.</h1>
+    <p>Pick a supported game to calculate and record your final scores.</p>
+  </div>
+  @if (auth.user(); as user) { <span class="avatar">{{ user.displayName?.charAt(0) || 'P' }}</span> }
+</section>
+
+<section class="library" aria-label="Supported games">
+  <a class="game-card" routerLink="/games/lost-cities">
+    <div class="cover" aria-hidden="true"><span class="sun"></span><span class="city">◆</span><span class="cover-title">LOST<br>CITIES</span></div>
+    <div class="details">
+      <p class="tag">2 players · 3 rounds</p>
+      <h2>Lost Cities</h2>
+      <p>Calculate all five expeditions, investments, bonuses, and the match winner.</p>
+      <span class="action">Start score sheet <b>→</b></span>
+    </div>
+  </a>
+
+  <a class="game-card sea-salt" routerLink="/games/sea-salt-paper">
+    <div class="cover" aria-hidden="true"><span class="waves">≈</span><span class="shell">◒</span><span class="cover-title">SEA SALT<br>& PAPER</span></div>
+    <div class="details">
+      <p class="tag">2–4 players · Variable rounds</p>
+      <h2>Sea Salt & Paper</h2>
+      <p>Enter each round's score and automatically track totals toward the target.</p>
+      <span class="action">Open score table <b>→</b></span>
+    </div>
+  </a>
+</section>

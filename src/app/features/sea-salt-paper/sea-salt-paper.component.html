@@ -1,0 +1,41 @@
+<header class="heading">
+  <div><p class="eyebrow">Sea Salt & Paper · Round scores</p><h1>Track the tide.</h1><p>Add each round's points and totals update automatically.</p></div>
+  <a href="https://en.doc.boardgamearena.com/Gamehelpseasaltpaper" target="_blank" rel="noreferrer">Rules ↗</a>
+</header>
+
+<section class="setup">
+  <label>Players<select [ngModel]="playerCount()" (ngModelChange)="updatePlayerCount($event)"><option [ngValue]="2">2 players</option><option [ngValue]="3">3 players</option><option [ngValue]="4">4 players</option></select></label>
+  <p><span>Game target</span><strong>{{ targetScore }} points</strong></p>
+</section>
+
+<section class="name-row">
+  @for (name of activeNames; track $index) {
+    <label>Player {{ $index + 1 }}<input [ngModel]="name" (ngModelChange)="updateName($index, $event)" maxlength="50"></label>
+  }
+</section>
+
+<section class="score-sheet">
+  <table>
+    <thead><tr><th>Round</th>@for (name of activeNames; track $index) { <th>{{ name }}</th> }</tr></thead>
+    <tbody>
+      @for (round of rounds(); track $index; let roundIndex = $index) {
+        <tr><th scope="row">{{ roundIndex + 1 }}</th>@for (name of activeNames; track $index; let playerIndex = $index) { <td><input type="number" min="0" max="99" [ngModel]="round[playerIndex]" (ngModelChange)="updateScore(roundIndex, playerIndex, $event)" [attr.aria-label]="name + ' round ' + (roundIndex + 1)"></td> }</tr>
+      }
+    </tbody>
+    <tfoot><tr><th>Total</th>@for (total of activeTotals; track $index) { <td [class.reached]="total >= targetScore">{{ total }}</td> }</tr></tfoot>
+  </table>
+</section>
+
+<div class="round-actions"><button type="button" class="secondary" (click)="removeRound()" [disabled]="rounds().length === 1">Remove round</button><button type="button" class="add" (click)="addRound()" [disabled]="rounds().length >= 20">+ Add round</button></div>
+
+<aside class="rules-note">Sea Salt & Paper ends when a player reaches {{ targetScore }} points. Tied totals are broken by the higher score in the final round.</aside>
+
+<section class="complete-bar">
+  <div><span>Current result</span><strong>{{ isComplete ? winner + ' wins' : targetScore + ' points needed to finish' }}</strong></div>
+  @if (auth.user()) {
+    <button type="button" (click)="saveGame()" [disabled]="saving() || !isComplete">{{ saving() ? 'Saving…' : 'Complete & save game' }}</button>
+  } @else {
+    <a class="sign-in-to-save" href="/login">Sign in to save this game</a>
+  }
+</section>
+@if (error(); as message) { <p class="error" role="alert">{{ message }}</p> }

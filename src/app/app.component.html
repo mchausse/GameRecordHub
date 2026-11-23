@@ -1,0 +1,22 @@
+@if (isLoginPage()) {
+  <router-outlet />
+} @else {
+  <header class="app-bar">
+    <a class="brand" routerLink="/games"><span>GR</span> GameRecordHub</a>
+    <nav aria-label="Main navigation">
+      <a routerLink="/games" routerLinkActive="active">Games</a>
+      @if (auth.user()) { <a routerLink="/history" routerLinkActive="active">History</a> }
+    </nav>
+    <div class="account">
+      @if (auth.user(); as user) {
+        <span class="user-name">{{ user.displayName || 'Player' }}</span>
+        <button type="button" (click)="auth.signOut()" [disabled]="auth.busy()">Sign out</button>
+      } @else {
+        <a class="sign-in-link" routerLink="/login">Sign in to save</a>
+      }
+    </div>
+  </header>
+  <main class="app-content">
+    <router-outlet />
+  </main>
+}

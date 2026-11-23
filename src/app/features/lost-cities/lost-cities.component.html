@@ -1,0 +1,68 @@
+<header class="score-head">
+  <div><p class="eyebrow">Lost Cities · Score sheet</p><h1>Record a match</h1><p>Two players, three rounds. Select each number card and investment played per expedition.</p></div>
+  <a class="rules-link" href="https://www.ultraboardgames.com/lost-cities/game-rules.php" target="_blank" rel="noreferrer">Scoring rules ↗</a>
+</header>
+
+<section class="players">
+  <label>Player 1<input [(ngModel)]="playerNames[0]" maxlength="50" aria-label="Player 1 name"></label>
+  <span>versus</span>
+  <label>Player 2<input [(ngModel)]="playerNames[1]" maxlength="50" aria-label="Player 2 name"></label>
+</section>
+
+<fieldset class="expedition-mode" aria-label="Lost Cities version">
+  <legend>Expedition lanes</legend>
+  <button type="button" [class.active]="expeditionCount() === 5" (click)="selectExpeditionCount(5)">
+    <strong>5 lanes</strong><span>Classic</span>
+  </button>
+  <button type="button" [class.active]="expeditionCount() === 6" (click)="selectExpeditionCount(6)">
+    <strong>6 lanes</strong><span>With Purple Cities</span>
+  </button>
+</fieldset>
+
+<nav class="round-tabs" aria-label="Rounds">
+  @for (round of [0,1,2]; track round) {
+    <button type="button" [class.active]="currentRound() === round" (click)="selectRound(round)">
+      <span>Round {{ round + 1 }}</span><strong>{{ roundTotal('player1', round) }} – {{ roundTotal('player2', round) }}</strong>
+    </button>
+  }
+</nav>
+
+<section class="score-table">
+  <header><span>Expedition</span><span>{{ playerNames[0] }}</span><span>{{ playerNames[1] }}</span></header>
+  @for (expedition of expeditions(); track expedition.id) {
+    <article class="expedition-row" [class]="'expedition-row ' + expedition.id">
+      <div class="expedition-name"><span>{{ expedition.symbol }}</span><strong>{{ expedition.name }}</strong></div>
+      @for (player of players; track player) {
+        <div class="player-entry">
+          <div class="numbers">
+            @for (value of cardValues; track value) {
+              <button type="button" [class.selected]="hasValue(player, expedition.id, value)" (click)="toggleValue(player, expedition.id, value)" [attr.aria-label]="(player === 'player1' ? playerNames[0] : playerNames[1]) + ' ' + expedition.name + ' card ' + value">{{ value }}</button>
+            }
+          </div>
+          <div class="entry-footer">
+            <label>Investments
+              <select [ngModel]="investments(player, expedition.id)" (ngModelChange)="setInvestments(player, expedition.id, $event)">
+                <option [ngValue]="0">None (×1)</option><option [ngValue]="1">1 (×2)</option><option [ngValue]="2">2 (×3)</option><option [ngValue]="3">3 (×4)</option>
+              </select>
+            </label>
+            <output [class.negative]="score(player, expedition.id) < 0">{{ score(player, expedition.id) }}</output>
+          </div>
+        </div>
+      }
+    </article>
+  }
+  <footer><strong>Round {{ currentRound() + 1 }} total</strong><strong>{{ roundTotal('player1') }}</strong><strong>{{ roundTotal('player2') }}</strong></footer>
+</section>
+
+<aside class="rule-note"><b>How scoring works:</b> A started expedition subtracts 20, then investment multipliers apply. If a column has 8 or more cards, add 20 after multiplying. An untouched expedition scores 0.</aside>
+
+<section class="match-summary">
+  <div><p>Match total</p><h2><span>{{ playerNames[0] }}</span><b>{{ matchTotal('player1') }}</b></h2><h2><span>{{ playerNames[1] }}</span><b>{{ matchTotal('player2') }}</b></h2></div>
+  <div class="winner">{{ matchTotal('player1') === matchTotal('player2') ? 'The match is tied' : (matchTotal('player1') > matchTotal('player2') ? playerNames[0] : playerNames[1]) + ' is leading' }}</div>
+  @if (auth.user()) {
+    <button type="button" (click)="saveGame()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Complete & save game' }}</button>
+  } @else {
+    <a class="sign-in-to-save" href="/login">Sign in to save this game</a>
+  }
+</section>
+@if (error(); as message) { <p class="error" role="alert">{{ message }}</p> }

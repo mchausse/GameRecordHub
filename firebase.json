@@ -1,0 +1,46 @@
+{
+  "hosting": {
+    "public": "dist/game-record-hub/browser",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
+    ]
+  },
+  "firestore": {
+    "database": "(default)",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "GameRecordHub",
+        "supportEmail": "maxime.chausse.1@gmail.com",
+        "authorizedRedirectUris": [
+          "https://gamerecordhub-ce47c.firebaseapp.com/__/auth/handler",
+          "https://gamerecordhub-ce47c.web.app/__/auth/handler",
+          "https://gamerecordhub.party/__/auth/handler",
+          "http://localhost"
+        ]
+      }
+    }
+  }
+}

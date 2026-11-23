@@ -1,0 +1,25 @@
+<section class="heading"><p class="eyebrow">Your archive</p><h1>Game history</h1><p>Completed games saved to your private Firestore collection.</p></section>
+@if (loading()) { <p class="state">Loading your games…</p> }
+@else if (error()) { <p class="state error">{{ error() }}</p> }
+@else if (games().length === 0) {
+  <section class="empty"><span>♟</span><h2>No completed games yet</h2><p>Choose a supported game, finish the match, and it will appear here.</p><a routerLink="/games">Browse games</a></section>
+} @else {
+  <section class="history-list">
+    @for (game of games(); track game.id) {
+      <article class="history-card">
+        <div class="game-icon" [class.sea]="game.gameSlug === 'sea-salt-paper'">{{ game.gameSlug === 'lost-cities' ? 'LC' : 'SS' }}</div>
+        <div class="summary">
+          <p class="tag">{{ game.gameSlug === 'lost-cities' ? 'Lost Cities · ' + (game.expeditionCount ?? 5) + ' lanes' : 'Sea Salt & Paper' }}</p>
+          <h2>{{ game.playerNames.join(' vs ') }}</h2>
+          <p>{{ game.completedAt | date:'mediumDate' }} · {{ game.winnerName === 'Tie' ? 'Match tied' : game.winnerName + ' won' }}</p>
+        </div>
+        <div class="rounds">
+          @for (round of game.roundScores; track $index) {
+            <span>R{{ $index + 1 }}<b>{{ roundDisplay(game, $index) }}</b></span>
+          }
+        </div>
+        <div class="total"><span>Total</span><strong>{{ totalDisplay(game) }}</strong></div>
+      </article>
+    }
+  </section>
+}
