@@ -50,6 +50,20 @@ export class AuthService {
     }
   }
 
+  async signInWithQaEmail(email: string, password: string): Promise<void> {
+    this._busy.set(true);
+    this._error.set(null);
+
+    try {
+      const { user } = await firebaseAuthApi.signInWithEmailAndPassword(auth, email, password);
+      await this.upsertUserProfile(user);
+    } catch (error) {
+      this._error.set(this.errorMessage(error));
+    } finally {
+      this._busy.set(false);
+    }
+  }
+
   async signOut(): Promise<void> {
     this._busy.set(true);
     this._error.set(null);
