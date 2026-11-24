@@ -45,6 +45,21 @@ describe('SeaSaltPaperComponent', () => {
     expect(component.activeNames.length).toBe(4);
   });
 
+  [2, 3, 4].forEach((playerCount) => {
+    it(`renders labeled mobile score inputs for ${playerCount} players`, () => {
+      component.updatePlayerCount(playerCount);
+      fixture.detectChanges();
+      const scoreCells = (fixture.nativeElement as HTMLElement)
+        .querySelectorAll('.score-sheet tbody td');
+
+      expect(scoreCells.length).toBe(playerCount);
+      scoreCells.forEach((cell, index) => {
+        expect(cell.getAttribute('data-label')).toBe(`Player ${index + 1}`);
+        expect(cell.querySelector('input')?.getAttribute('inputmode')).toBe('numeric');
+      });
+    });
+  });
+
   it('adds, updates, and totals rounds', () => {
     component.updateScore(0, 0, 17);
     component.addRound();

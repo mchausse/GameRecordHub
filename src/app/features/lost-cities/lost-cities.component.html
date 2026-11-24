@@ -10,12 +10,12 @@
 </section>
 
 <fieldset class="expedition-mode" [attr.aria-label]="'Lost Cities version' | translate">
-  <legend>{{ 'Expedition lanes' | translate }}</legend>
+  <legend>{{ 'Expeditions' | translate }}</legend>
   <button type="button" [class.active]="expeditionCount() === 5" (click)="selectExpeditionCount(5)">
-    <strong>{{ '{{count}} lanes' | translate:{ count: 5 } }}</strong><span>{{ 'Classic' | translate }}</span>
+    <strong>{{ '{{count}} expeditions' | translate:{ count: 5 } }}</strong><span>{{ 'Classic' | translate }}</span>
   </button>
   <button type="button" [class.active]="expeditionCount() === 6" (click)="selectExpeditionCount(6)">
-    <strong>{{ '{{count}} lanes' | translate:{ count: 6 } }}</strong><span>{{ 'With Purple Cities' | translate }}</span>
+    <strong>{{ '{{count}} expeditions' | translate:{ count: 6 } }}</strong><span>{{ 'With Purple Cities' | translate }}</span>
   </button>
 </fieldset>
 
@@ -33,7 +33,9 @@
     <article class="expedition-row" [class]="'expedition-row ' + expedition.id">
       <div class="expedition-name"><span>{{ expedition.symbol }}</span><strong>{{ expedition.name | translate }}</strong></div>
       @for (player of players; track player) {
-        <div class="player-entry">
+        <div
+          class="player-entry"
+          [attr.data-label]="player === 'player1' ? playerNames[0] : playerNames[1]">
           <div class="numbers">
             @for (value of cardValues; track value) {
               <button type="button" [class.selected]="hasValue(player, expedition.id, value)" (click)="toggleValue(player, expedition.id, value)" [attr.aria-label]="(player === 'player1' ? playerNames[0] : playerNames[1]) + ' ' + expedition.name + ' card ' + value">{{ value }}</button>
