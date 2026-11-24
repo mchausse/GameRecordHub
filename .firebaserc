@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "gamerecordhub-ce47c"
+    "default": "gamerecordhub-ce47c",
+    "qa": "gamerecordhub-qa"
   }
 }

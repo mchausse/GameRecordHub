@@ -1,5 +1,41 @@
 # GameRecordHub
 
+## QA environment
+
+The QA deployment is isolated in the `gamerecordhub-qa` Firebase project:
+
+- Hosting: `https://gamerecordhub-qa.web.app`
+- Firebase Authentication: QA users and credentials
+- Firestore: QA database with the same rules as production
+
+Deploy QA with `npm run deploy:qa`. This runs the unit tests and a QA-specific
+Angular build before deploying. The QA build is the only build that exposes the
+email/password form used by browser tests.
+
+Run the Playwright suite against the deployed QA application with:
+
+```bash
+QA_E2E_EMAIL=qa-user@example.com \
+QA_E2E_PASSWORD='...' \
+npm run test:e2e:qa
+```
+
+Set `QA_BASE_URL` to target a different QA Hosting channel. In GitHub, configure
+the `QA` environment with `FIREBASE_SERVICE_ACCOUNT_GAMERECORDHUB_QA`,
+`QA_E2E_EMAIL`, and `QA_E2E_PASSWORD` secrets. The `QA deployment and end-to-end
+tests` workflow deploys QA manually and then executes Playwright against that URL.
+
+One-time Firebase setup:
+
+1. Open the `gamerecordhub-qa` Firebase Console and initialize Authentication.
+2. Enable the Email/Password provider.
+3. Create the QA test user whose credentials are stored in the GitHub
+   `QA_E2E_EMAIL` and `QA_E2E_PASSWORD` environment secrets.
+
+The provider must be initialized manually because a newly created Spark
+project's Authentication configuration is not exposed by the Firebase CLI.
+Production never renders the QA credential form.
+
 Angular 19 application for recording board game sessions, backed by Firebase Authentication and Cloud Firestore.
 
 ## Firebase project

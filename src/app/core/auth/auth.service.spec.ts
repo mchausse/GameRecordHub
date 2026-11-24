@@ -25,6 +25,7 @@ describe('AuthService', () => {
       return () => undefined;
     });
     spyOn(firebaseAuthApi, 'signInWithPopup');
+    spyOn(firebaseAuthApi, 'signInWithEmailAndPassword');
     spyOn(firebaseAuthApi, 'signOut');
     spyOn(firebaseFirestoreApi, 'doc').and.returnValue({} as never);
     spyOn(firebaseFirestoreApi, 'getDoc');
@@ -82,6 +83,22 @@ describe('AuthService', () => {
       photoURL: null,
       createdAt: jasmine.anything(),
     }));
+  });
+
+  it('signs in a QA user with email and password', async () => {
+    const service = TestBed.inject(AuthService);
+    (firebaseAuthApi.signInWithEmailAndPassword as jasmine.Spy).and.resolveTo({ user });
+    (firebaseFirestoreApi.getDoc as jasmine.Spy).and.resolveTo({ exists: () => false });
+
+    await service.signInWithQaEmail('qa@example.com', 'test-password');
+
+    expect(firebaseAuthApi.signInWithEmailAndPassword).toHaveBeenCalledWith(
+      jasmine.anything(),
+      'qa@example.com',
+      'test-password',
+    );
+    expect(firebaseFirestoreApi.setDoc as jasmine.Spy).toHaveBeenCalled();
+    expect(service.error()).toBeNull();
   });
 
   [
