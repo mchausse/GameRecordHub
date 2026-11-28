@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -6,6 +6,8 @@ import { AuthService } from '../../core/auth/auth.service';
 import { GameRecordsService } from '../../core/games/game-records.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { SavedPlayer } from '../../core/players/player.models';
+import { PlayersService } from '../../core/players/players.service';
 import {
   CARD_VALUES,
   ExpeditionId,
@@ -22,8 +24,9 @@ import {
   templateUrl: './lost-cities.component.html',
   styleUrl: './lost-cities.component.scss',
 })
-export class LostCitiesComponent {
+export class LostCitiesComponent implements OnInit {
   private readonly records = inject(GameRecordsService);
+  private readonly playersService = inject(PlayersService);
   private readonly router = inject(Router);
   readonly auth = inject(AuthService);
   readonly i18n = inject(I18nService);
@@ -35,8 +38,31 @@ export class LostCitiesComponent {
   readonly rounds = signal<LostCitiesRound[]>([emptyRound(), emptyRound(), emptyRound()]);
   readonly currentRound = signal(0);
   readonly playerNames: [string, string] = ['Player 1', 'Player 2'];
+  readonly playerIds: [string | null, string | null] = [null, null];
+  readonly savedPlayers = signal<SavedPlayer[]>([]);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
+
+  async ngOnInit(): Promise<void> {
+    await this.auth.ready;
+    if (!this.auth.user()) return;
+    try {
+      this.savedPlayers.set(await this.playersService.list());
+    } catch {
+      this.error.set(this.i18n.translate('Unable to load saved players. Temporary names are still available.'));
+    }
+  }
+
+  selectSavedPlayer(index: number, playerId: string): void {
+    this.playerIds[index] = playerId || null;
+    const player = this.savedPlayers().find((saved) => saved.id === playerId);
+    if (player) this.playerNames[index] = player.name;
+    else this.playerNames[index] = `Player ${index + 1}`;
+  }
+
+  selectedByAnotherPlayer(index: number, playerId: string): boolean {
+    return this.playerIds.some((selectedId, selectedIndex) => selectedIndex !== index && selectedId === playerId);
+  }
 
   score(player: 'player1' | 'player2', expedition: ExpeditionId): number {
     return scoreExpedition(this.rounds()[this.currentRound()][player][expedition]);
@@ -87,6 +113,11 @@ export class LostCitiesComponent {
 
   async saveGame(): Promise<void> {
     const names = this.playerNames.map((name) => name.trim());
+    const savedIds = this.playerIds.filter((id): id is string => id !== null);
+    if (new Set(savedIds).size !== savedIds.length) {
+      this.error.set(this.i18n.translate('Select each saved player only once.'));
+      return;
+    }
     if (names.some((name) => !name)) {
       this.error.set(this.i18n.translate('Enter both player names before saving.'));
       return;
@@ -99,6 +130,7 @@ export class LostCitiesComponent {
         gameSlug: 'lost-cities',
         expeditionCount: this.expeditionCount(),
         playerNames: [names[0], names[1]],
+        playerIds: [...this.playerIds],
         roundScores: [
           { player1: this.roundTotal('player1', 0), player2: this.roundTotal('player2', 0) },
           { player1: this.roundTotal('player1', 1), player2: this.roundTotal('player2', 1) },

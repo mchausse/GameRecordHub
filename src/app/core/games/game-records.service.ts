@@ -6,12 +6,12 @@ import {
 import { AuthService } from '../auth/auth.service';
 import { firebaseFirestoreApi, firestore } from '../firebase/firebase';
 import { LostCitiesExpeditionCount, SavedLostCitiesGame } from '../../features/lost-cities/lost-cities.models';
-import { SavedSeaSaltPaperGame, StoredSeaSaltRound, fromStoredSeaSaltRounds, toStoredSeaSaltRounds } from '../../features/sea-salt-paper/sea-salt-paper.models';
+import { SavedSeaSaltPaperGame, StoredSeaSaltRound, determineWinnerIndex, fromStoredSeaSaltRounds, toStoredSeaSaltRounds } from '../../features/sea-salt-paper/sea-salt-paper.models';
 
-export type NewLostCitiesGame = Omit<SavedLostCitiesGame, 'id' | 'completedAt' | 'createdAt' | 'winnerName' | 'ownerUid' | 'expeditionCount'> & {
+export type NewLostCitiesGame = Omit<SavedLostCitiesGame, 'id' | 'completedAt' | 'createdAt' | 'winnerName' | 'winnerPlayerId' | 'ownerUid' | 'expeditionCount'> & {
   expeditionCount: LostCitiesExpeditionCount;
 };
-export type NewSeaSaltPaperGame = Omit<SavedSeaSaltPaperGame, 'id' | 'completedAt' | 'createdAt' | 'winnerName' | 'ownerUid'>;
+export type NewSeaSaltPaperGame = Omit<SavedSeaSaltPaperGame, 'id' | 'completedAt' | 'createdAt' | 'winnerName' | 'winnerPlayerId' | 'ownerUid'>;
 export type SavedGame = SavedLostCitiesGame | SavedSeaSaltPaperGame;
 
 @Injectable({ providedIn: 'root' })
@@ -22,14 +22,20 @@ export class GameRecordsService {
     const user = this.auth.user();
     if (!user) throw new Error('Sign in before saving a game.');
 
-    const winnerName = game.totals.player1 === game.totals.player2
+    const winnerIndex = game.totals.player1 === game.totals.player2
+      ? -1
+      : game.totals.player1 > game.totals.player2 ? 0 : 1;
+    const winnerName = winnerIndex === -1
       ? 'Tie'
-      : game.totals.player1 > game.totals.player2 ? game.playerNames[0] : game.playerNames[1];
+      : game.playerNames[winnerIndex];
+    const playerIds: [string | null, string | null] = game.playerIds ?? [null, null];
     const reference = await firebaseFirestoreApi.addDoc(
       firebaseFirestoreApi.collection(firestore, 'users', user.uid, 'games'), {
       ...game,
+      playerIds,
       ownerUid: user.uid,
       winnerName,
+      winnerPlayerId: winnerIndex === -1 ? null : playerIds[winnerIndex],
       createdAt: firebaseFirestoreApi.serverTimestamp(),
       completedAt: firebaseFirestoreApi.serverTimestamp(),
     });
@@ -40,13 +46,17 @@ export class GameRecordsService {
     const user = this.auth.user();
     if (!user) throw new Error('Sign in before saving a game.');
 
-    const winnerName = this.seaSaltPaperWinner(game.playerNames, game.roundScores);
+    const winnerIndex = determineWinnerIndex(game.roundScores);
+    const winnerName = winnerIndex === null ? 'Tie' : game.playerNames[winnerIndex];
+    const playerIds = game.playerIds ?? game.playerNames.map(() => null);
     const reference = await firebaseFirestoreApi.addDoc(
       firebaseFirestoreApi.collection(firestore, 'users', user.uid, 'games'), {
       ...game,
+      playerIds,
       roundScores: toStoredSeaSaltRounds(game.roundScores),
       ownerUid: user.uid,
       winnerName,
+      winnerPlayerId: winnerIndex === null ? null : playerIds[winnerIndex] ?? null,
       createdAt: firebaseFirestoreApi.serverTimestamp(),
       completedAt: firebaseFirestoreApi.serverTimestamp(),
     });
@@ -78,14 +88,4 @@ export class GameRecordsService {
       });
   }
 
-  private seaSaltPaperWinner(names: string[], rounds: number[][]): string {
-    const totals = names.map((_, index) => rounds.reduce((sum, round) => sum + round[index], 0));
-    const highest = Math.max(...totals);
-    const leaders = names.map((name, index) => ({ name, index })).filter(({ index }) => totals[index] === highest);
-    if (leaders.length === 1) return leaders[0].name;
-    const finalRound = rounds.at(-1) ?? [];
-    const bestFinal = Math.max(...leaders.map(({ index }) => finalRound[index]));
-    const finalLeaders = leaders.filter(({ index }) => finalRound[index] === bestFinal);
-    return finalLeaders.length === 1 ? finalLeaders[0].name : 'Tie';
-  }
 }

@@ -4,16 +4,23 @@ import { Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { GameRecordsService } from '../../core/games/game-records.service';
+import { PlayersService } from '../../core/players/players.service';
 import { LostCitiesComponent } from './lost-cities.component';
 
 describe('LostCitiesComponent', () => {
   let fixture: ComponentFixture<LostCitiesComponent>;
   let component: LostCitiesComponent;
   let records: jasmine.SpyObj<GameRecordsService>;
+  let savedPlayers: jasmine.SpyObj<PlayersService>;
 
   beforeEach(async () => {
     records = jasmine.createSpyObj<GameRecordsService>('GameRecordsService', ['saveLostCitiesGame']);
     records.saveLostCitiesGame.and.resolveTo('game-id');
+    savedPlayers = jasmine.createSpyObj<PlayersService>('PlayersService', ['list']);
+    savedPlayers.list.and.resolveTo([
+      { id: 'ada', name: 'Ada', ownerUid: 'test', createdAt: new Date(), updatedAt: new Date() },
+      { id: 'grace', name: 'Grace', ownerUid: 'test', createdAt: new Date(), updatedAt: new Date() },
+    ]);
     const router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
     router.navigateByUrl.and.resolveTo(true);
 
@@ -21,8 +28,9 @@ describe('LostCitiesComponent', () => {
       imports: [LostCitiesComponent],
       providers: [
         { provide: GameRecordsService, useValue: records },
+        { provide: PlayersService, useValue: savedPlayers },
         { provide: Router, useValue: router },
-        { provide: AuthService, useValue: { user: signal({ uid: 'test' }) } },
+        { provide: AuthService, useValue: { user: signal({ uid: 'test' }), ready: Promise.resolve() } },
       ],
     }).compileComponents();
 
@@ -37,6 +45,19 @@ describe('LostCitiesComponent', () => {
     expect(component.score('player1', 'red')).toBe(-13);
     component.toggleValue('player1', 'red', 2);
     expect(component.score('player1', 'red')).toBe(-15);
+  });
+
+  it('saves stable IDs alongside editable temporary names', async () => {
+    await component.ngOnInit();
+    component.selectSavedPlayer(0, 'ada');
+    component.playerNames[1] = 'Temporary';
+
+    await component.saveGame();
+
+    expect(records.saveLostCitiesGame).toHaveBeenCalledWith(jasmine.objectContaining({
+      playerNames: ['Ada', 'Temporary'],
+      playerIds: ['ada', null],
+    }));
   });
 
   it('applies the investment multiplier', () => {

@@ -142,6 +142,22 @@
     padding: 4px;
   }
 
+  .app-bar.authenticated {
+    grid-template-areas:
+      'brand locale'
+      'nav nav'
+      'account account';
+  }
+
+  .app-bar.authenticated nav {
+    justify-self: stretch;
+  }
+
+  .app-bar.authenticated nav a {
+    flex: 1;
+    justify-content: center;
+  }
+
   .app-bar nav a {
     min-height: 40px;
     padding: 10px 12px;
@@ -170,6 +186,10 @@
     padding: 8px 4px;
     font-size: 0.82rem;
     white-space: nowrap;
+  }
+
+  .app-bar.authenticated .account button {
+    justify-self: end;
   }
 
   .sign-in-link {
