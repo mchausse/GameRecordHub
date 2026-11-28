@@ -18,7 +18,10 @@
         }
       </label>
       @if (!playerIds[$index]) {
-        <input [(ngModel)]="playerNames[$index]" maxlength="50" [attr.aria-label]="('Player {{number}} name' | translate:{ number: $index + 1 })">
+        <input
+          [(ngModel)]="playerNames[$index]"
+          maxlength="50"
+          [attr.aria-label]="('Player {{number}} name' | translate:{ number: $index + 1 })">
       } @else {
         <strong class="selected-player-name">{{ playerNames[$index] }}</strong>
       }

@@ -27,13 +27,10 @@ tests` workflow deploys QA manually and then executes Playwright against that UR
 
 One-time Firebase setup:
 
-1. Open the `gamerecordhub-qa` Firebase Console and initialize Authentication.
-2. Enable the Email/Password provider.
-3. Create the QA test user whose credentials are stored in the GitHub
-   `QA_E2E_EMAIL` and `QA_E2E_PASSWORD` environment secrets.
+Email/Password Authentication is deployed from `firebase.qa.json`. Create the
+QA test user whose credentials are stored in the GitHub `QA_E2E_EMAIL` and
+`QA_E2E_PASSWORD` environment secrets after the first QA deployment.
 
-The provider must be initialized manually because a newly created Spark
-project's Authentication configuration is not exposed by the Firebase CLI.
 Production never renders the QA credential form.
 
 Angular 19 application for recording board game sessions, backed by Firebase Authentication and Cloud Firestore.

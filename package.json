@@ -14,7 +14,7 @@
     "predeploy": "npm run test:ci && npm run build",
     "deploy": "npx -y firebase-tools@latest deploy --only hosting,firestore:rules --project gamerecordhub-ce47c",
     "predeploy:qa": "npm run test:ci && npm run build:qa",
-    "deploy:qa": "npx -y firebase-tools@latest deploy --only hosting,firestore:rules --project gamerecordhub-qa"
+    "deploy:qa": "npx -y firebase-tools@latest deploy --config firebase.qa.json --only hosting,firestore:rules,auth --project gamerecordhub-qa"
   },
   "private": true,
   "dependencies": {
