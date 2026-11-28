@@ -17,6 +17,7 @@ export interface SavedLostCitiesGame {
   gameSlug: 'lost-cities';
   expeditionCount?: LostCitiesExpeditionCount;
   playerNames: [string, string];
+  playerIds?: [string | null, string | null];
   roundScores: [
     { player1: number; player2: number },
     { player1: number; player2: number },
@@ -24,6 +25,7 @@ export interface SavedLostCitiesGame {
   ];
   totals: { player1: number; player2: number };
   winnerName: string;
+  winnerPlayerId?: string | null;
   completedAt: Date;
   createdAt: Date;
 }

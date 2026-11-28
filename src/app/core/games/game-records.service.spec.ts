@@ -36,6 +36,7 @@ describe('GameRecordsService', () => {
       { player1: 0, player2: 0 },
     ],
     totals: { player1, player2 },
+    playerIds: ['ada', null],
   });
 
   it('requires authentication before saving Lost Cities', async () => {
@@ -61,7 +62,11 @@ describe('GameRecordsService', () => {
       expect(id).toBe('lost-id');
       expect(firebaseFirestoreApi.addDoc as jasmine.Spy).toHaveBeenCalledWith(
         jasmine.objectContaining({ path: 'games' }),
-        jasmine.objectContaining({ ownerUid: 'user-1', winnerName }),
+        jasmine.objectContaining({
+          ownerUid: 'user-1',
+          winnerName,
+          winnerPlayerId: winnerName === 'Ada' ? 'ada' : winnerName === 'Grace' ? null : null,
+        }),
       );
     });
   });
@@ -79,6 +84,33 @@ describe('GameRecordsService', () => {
 
     await expectAsync(service.saveSeaSaltPaperGame(game))
       .toBeRejectedWithError('Sign in before saving a game.');
+  });
+
+  [2, 3, 4].forEach((playerCount) => {
+    it(`persists saved-player IDs for a ${playerCount}-player Sea Salt & Paper game`, async () => {
+      const service = TestBed.inject(GameRecordsService);
+      (firebaseFirestoreApi.addDoc as jasmine.Spy).and.resolveTo({ id: 'sea-id' });
+      const names = Array.from({ length: playerCount }, (_, index) => `Player ${index + 1}`);
+      const playerIds = Array.from({ length: playerCount }, (_, index) => index === 0 ? 'ada' : null);
+      const totals = names.map((_, index) => index === 0 ? 40 : 0);
+
+      await service.saveSeaSaltPaperGame({
+        gameSlug: 'sea-salt-paper',
+        playerNames: names,
+        playerIds,
+        roundScores: [totals],
+        totals,
+        targetScore: playerCount === 2 ? 40 : playerCount === 3 ? 35 : 30,
+      });
+
+      expect(firebaseFirestoreApi.addDoc).toHaveBeenCalledWith(
+        jasmine.anything(),
+        jasmine.objectContaining({
+          playerIds,
+          winnerPlayerId: 'ada',
+        }),
+      );
+    });
   });
 
   [

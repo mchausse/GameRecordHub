@@ -1,4 +1,4 @@
-import { determineWinner, fromStoredSeaSaltRounds, sumScores, targetScoreFor, toStoredSeaSaltRounds } from './sea-salt-paper.models';
+import { determineWinner, determineWinnerIndex, fromStoredSeaSaltRounds, sumScores, targetScoreFor, toStoredSeaSaltRounds } from './sea-salt-paper.models';
 
 describe('Sea Salt & Paper scoring', () => {
   it('uses the official target by player count', () => {
@@ -13,6 +13,11 @@ describe('Sea Salt & Paper scoring', () => {
 
   it('breaks a tied final total by the final-round score', () => {
     expect(determineWinner(['A', 'B'], [[30, 20], [5, 15]])).toBe('B');
+    expect(determineWinnerIndex([[30, 20], [5, 15]])).toBe(1);
+  });
+
+  it('returns no winner ID when the final-round tie breaker is also tied', () => {
+    expect(determineWinnerIndex([[20, 20, 20], [10, 10, 10]])).toBeNull();
   });
 
   it('stores rounds as maps containing flat arrays for Firestore compatibility', () => {

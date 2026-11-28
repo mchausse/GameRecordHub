@@ -1,0 +1,55 @@
+name: QA deployment and end-to-end tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  qa:
+    name: Deploy and test QA
+    runs-on: ubuntu-latest
+    environment: QA
+    env:
+      QA_BASE_URL: https://gamerecordhub-qa.web.app
+      QA_E2E_EMAIL: ${{ secrets.QA_E2E_EMAIL }}
+      QA_E2E_PASSWORD: ${{ secrets.QA_E2E_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_GAMERECORDHUB_QA }}
+
+      - name: Validate and deploy QA
+        run: npm run deploy:qa
+
+      - name: Install Playwright Chromium
+        run: npm run test:e2e:install
+
+      - name: Require QA test credentials
+        run: |
+          test -n "$QA_E2E_EMAIL"
+          test -n "$QA_E2E_PASSWORD"
+
+      - name: Run QA end-to-end tests
+        run: npm run test:e2e:qa
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore

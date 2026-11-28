@@ -61,7 +61,8 @@ describe('AppComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const signOut = compiled.querySelector<HTMLButtonElement>('.account button');
 
-    expect(compiled.querySelectorAll('nav a').length).toBe(2);
+    expect(compiled.querySelectorAll('nav a').length).toBe(3);
+    expect(compiled.querySelector('.app-bar')?.classList).toContain('authenticated');
     expect(signOut?.textContent).toContain('Sign out');
     signOut?.click();
     expect(authMock.signOut).toHaveBeenCalled();

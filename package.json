@@ -5,12 +5,17 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:qa": "ng build --configuration qa",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:ci": "ng test --watch=false --browsers=ChromeHeadless",
     "test:coverage": "ng test --watch=false --browsers=ChromeHeadless --code-coverage",
+    "test:e2e:qa": "playwright test",
+    "test:e2e:install": "playwright install --with-deps chromium",
     "predeploy": "npm run test:ci && npm run build",
-    "deploy": "npx -y firebase-tools@latest deploy --only hosting,firestore:rules --project gamerecordhub-ce47c"
+    "deploy": "npx -y firebase-tools@latest deploy --only hosting,firestore:rules --project gamerecordhub-ce47c",
+    "predeploy:qa": "npm run test:ci && npm run build:qa",
+    "deploy:qa": "npx -y firebase-tools@latest deploy --config firebase.qa.json --only hosting,firestore:rules,auth --project gamerecordhub-qa"
   },
   "private": true,
   "dependencies": {
@@ -31,6 +36,7 @@
     "@angular-devkit/build-angular": "^19.1.2",
     "@angular/cli": "^19.1.2",
     "@angular/compiler-cli": "^19.1.0",
+    "@playwright/test": "^1.65.1",
     "@types/jasmine": "~5.1.0",
     "jasmine-core": "~5.5.0",
     "karma": "~6.4.0",

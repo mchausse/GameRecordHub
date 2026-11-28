@@ -9,6 +9,30 @@
       <span class="google-g">G</span>
       {{ (auth.busy() ? 'Connecting…' : 'Continue with Google') | translate }}
     </button>
+    @if (qa) {
+      <form class="qa-login" (ngSubmit)="signInToQa()">
+        <p>{{ 'QA sign-in' | translate }}</p>
+        <label>
+          {{ 'Email' | translate }}
+          <input
+            type="email"
+            name="qaEmail"
+            autocomplete="username"
+            [(ngModel)]="qaEmail"
+            required>
+        </label>
+        <label>
+          {{ 'Password' | translate }}
+          <input
+            type="password"
+            name="qaPassword"
+            autocomplete="current-password"
+            [(ngModel)]="qaPassword"
+            required>
+        </label>
+        <button type="submit" [disabled]="auth.busy() || !auth.initialized()">{{ 'Sign in to QA' | translate }}</button>
+      </form>
+    }
     @if (auth.error(); as error) { <p class="error" role="alert">{{ error }}</p> }
     <a class="guest-link" href="/games">{{ 'Continue without an account — calculate scores only' | translate }}</a>
     <p class="privacy">{{ 'Your records are private and belong to your account.' | translate }}</p>

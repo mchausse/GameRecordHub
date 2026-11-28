@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -6,6 +6,8 @@ import { AuthService } from '../../core/auth/auth.service';
 import { GameRecordsService } from '../../core/games/game-records.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { SavedPlayer } from '../../core/players/player.models';
+import { PlayersService } from '../../core/players/players.service';
 import { determineWinner, sumScores, targetScoreFor } from './sea-salt-paper.models';
 
 @Component({
@@ -14,17 +16,30 @@ import { determineWinner, sumScores, targetScoreFor } from './sea-salt-paper.mod
   templateUrl: './sea-salt-paper.component.html',
   styleUrl: './sea-salt-paper.component.scss',
 })
-export class SeaSaltPaperComponent {
+export class SeaSaltPaperComponent implements OnInit {
   private readonly records = inject(GameRecordsService);
+  private readonly playersService = inject(PlayersService);
   private readonly router = inject(Router);
   readonly auth = inject(AuthService);
   readonly i18n = inject(I18nService);
 
   readonly playerNames = signal(['Player 1', 'Player 2', 'Player 3', 'Player 4']);
+  readonly playerIds = signal<Array<string | null>>([null, null, null, null]);
+  readonly savedPlayers = signal<SavedPlayer[]>([]);
   readonly playerCount = signal(2);
   readonly rounds = signal<number[][]>([[0, 0, 0, 0]]);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
+
+  async ngOnInit(): Promise<void> {
+    await this.auth.ready;
+    if (!this.auth.user()) return;
+    try {
+      this.savedPlayers.set(await this.playersService.list());
+    } catch {
+      this.error.set(this.i18n.translate('Unable to load saved players. Temporary names are still available.'));
+    }
+  }
 
   get targetScore(): number { return targetScoreFor(this.playerCount()); }
   get activeNames(): string[] { return this.playerNames().slice(0, this.playerCount()); }
@@ -40,6 +55,18 @@ export class SeaSaltPaperComponent {
     const names = [...this.playerNames()];
     names[index] = value;
     this.playerNames.set(names);
+  }
+
+  selectSavedPlayer(index: number, playerId: string): void {
+    const ids = [...this.playerIds()];
+    ids[index] = playerId || null;
+    this.playerIds.set(ids);
+    const player = this.savedPlayers().find((saved) => saved.id === playerId);
+    this.updateName(index, player?.name ?? `Player ${index + 1}`);
+  }
+
+  selectedByAnotherPlayer(index: number, playerId: string): boolean {
+    return this.playerIds().some((selectedId, selectedIndex) => selectedIndex !== index && selectedId === playerId);
   }
 
   updateScore(roundIndex: number, playerIndex: number, value: number): void {
@@ -59,6 +86,12 @@ export class SeaSaltPaperComponent {
 
   async saveGame(): Promise<void> {
     const names = this.activeNames.map((name) => name.trim());
+    const activePlayerIds = this.playerIds().slice(0, this.playerCount());
+    const savedIds = activePlayerIds.filter((id): id is string => id !== null);
+    if (new Set(savedIds).size !== savedIds.length) {
+      this.error.set(this.i18n.translate('Select each saved player only once.'));
+      return;
+    }
     if (names.some((name) => !name)) {
       this.error.set(this.i18n.translate('Enter every player name before saving.'));
       return;
@@ -77,6 +110,7 @@ export class SeaSaltPaperComponent {
       await this.records.saveSeaSaltPaperGame({
         gameSlug: 'sea-salt-paper',
         playerNames: names,
+        playerIds: activePlayerIds,
         roundScores: this.rounds().map((round) => round.slice(0, this.playerCount())),
         totals: this.activeTotals,
         targetScore: this.targetScore,

@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { GameRecordsService } from '../../core/games/game-records.service';
+import { PlayersService } from '../../core/players/players.service';
 import { SeaSaltPaperComponent } from './sea-salt-paper.component';
 
 describe('SeaSaltPaperComponent', () => {
@@ -11,19 +12,28 @@ describe('SeaSaltPaperComponent', () => {
   let component: SeaSaltPaperComponent;
   let records: jasmine.SpyObj<GameRecordsService>;
   let router: jasmine.SpyObj<Router>;
+  let savedPlayers: jasmine.SpyObj<PlayersService>;
+  const authUser = signal<{ uid: string } | null>({ uid: 'test' });
 
   beforeEach(async () => {
+    authUser.set({ uid: 'test' });
     records = jasmine.createSpyObj<GameRecordsService>('GameRecordsService', ['saveSeaSaltPaperGame']);
     router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
     records.saveSeaSaltPaperGame.and.resolveTo('game-id');
+    savedPlayers = jasmine.createSpyObj<PlayersService>('PlayersService', ['list']);
+    savedPlayers.list.and.resolveTo([
+      { id: 'ada', name: 'Ada', ownerUid: 'test', createdAt: new Date(), updatedAt: new Date() },
+      { id: 'grace', name: 'Grace', ownerUid: 'test', createdAt: new Date(), updatedAt: new Date() },
+    ]);
     router.navigateByUrl.and.resolveTo(true);
 
     await TestBed.configureTestingModule({
       imports: [SeaSaltPaperComponent],
       providers: [
         { provide: GameRecordsService, useValue: records },
+        { provide: PlayersService, useValue: savedPlayers },
         { provide: Router, useValue: router },
-        { provide: AuthService, useValue: { user: signal({ uid: 'test' }) } },
+        { provide: AuthService, useValue: { user: authUser, ready: Promise.resolve() } },
       ],
     }).compileComponents();
 
@@ -67,6 +77,55 @@ describe('SeaSaltPaperComponent', () => {
     expect(component.rounds().length).toBe(2);
     expect(component.activeTotals[0]).toBe(42);
     expect(component.isComplete).toBeTrue();
+  });
+
+  it('saves saved-player IDs and temporary names for active seats', async () => {
+    component.updatePlayerCount(3);
+    await component.ngOnInit();
+    component.selectSavedPlayer(0, 'ada');
+    component.updateName(1, 'Temporary');
+    component.selectSavedPlayer(2, 'grace');
+    component.updateScore(0, 0, 35);
+
+    await component.saveGame();
+
+    expect(records.saveSeaSaltPaperGame).toHaveBeenCalledWith(jasmine.objectContaining({
+      playerNames: ['Ada', 'Temporary', 'Grace'],
+      playerIds: ['ada', null, 'grace'],
+    }));
+  });
+
+  it('rejects the same saved player in two active seats', async () => {
+    await component.ngOnInit();
+    component.selectSavedPlayer(0, 'ada');
+    component.playerIds.set(['ada', 'ada', null, null]);
+    component.updateScore(0, 0, 40);
+
+    await component.saveGame();
+
+    expect(records.saveSeaSaltPaperGame).not.toHaveBeenCalled();
+    expect(component.error()).toContain('only once');
+  });
+
+  it('supports temporary selection and handles saved-player load failures', async () => {
+    await component.ngOnInit();
+    component.selectSavedPlayer(0, 'ada');
+    expect(component.selectedByAnotherPlayer(1, 'ada')).toBeTrue();
+    component.selectSavedPlayer(0, '');
+    expect(component.playerNames()[0]).toBe('Player 1');
+
+    savedPlayers.list.and.rejectWith(new Error('failed'));
+    await component.ngOnInit();
+    expect(component.error()).toContain('Temporary names are still available');
+  });
+
+  it('does not load saved players while signed out', async () => {
+    savedPlayers.list.calls.reset();
+    authUser.set(null);
+
+    await component.ngOnInit();
+
+    expect(savedPlayers.list).not.toHaveBeenCalled();
   });
 
   it('updates names and normalizes non-finite scores to zero', () => {

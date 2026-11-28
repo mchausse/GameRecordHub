@@ -46,7 +46,8 @@
 }
 
 .setup select,
-.name-row input {
+.name-row input,
+.name-row select {
   display: block;
   margin-top: 7px;
   padding: 12px 14px;
@@ -55,6 +56,20 @@
   background: #fff;
   color: #214a56;
   font-size: 0.95rem;
+}
+
+.player-choice {
+  min-width: 0;
+}
+
+.selected-player-name {
+  display: block;
+  margin-top: 7px;
+  padding: 12px 14px;
+  border: 1px solid #bed0ce;
+  border-radius: 10px;
+  background: #e7f1ef;
+  color: #214a56;
 }
 
 .setup p {
@@ -83,7 +98,8 @@
   gap: 12px;
 }
 
-.name-row input {
+.name-row input,
+.name-row select {
   width: 100%;
   box-sizing: border-box;
 }

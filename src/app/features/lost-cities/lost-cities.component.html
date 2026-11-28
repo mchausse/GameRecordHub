@@ -4,9 +4,30 @@
 </header>
 
 <section class="players">
-  <label>{{ 'Player 1' | translate }}<input [(ngModel)]="playerNames[0]" maxlength="50" [attr.aria-label]="'Player 1 name' | translate"></label>
-  <span>{{ 'versus' | translate }}</span>
-  <label>{{ 'Player 2' | translate }}<input [(ngModel)]="playerNames[1]" maxlength="50" [attr.aria-label]="'Player 2 name' | translate"></label>
+  @for (name of playerNames; track $index) {
+    <div class="player-choice">
+      <label>
+        {{ 'Player {{number}}' | translate:{ number: $index + 1 } }}
+        @if (auth.user() && savedPlayers().length > 0) {
+          <select [ngModel]="playerIds[$index] ?? ''" (ngModelChange)="selectSavedPlayer($index, $event)">
+            <option value="">{{ 'Temporary player' | translate }}</option>
+            @for (player of savedPlayers(); track player.id) {
+              <option [value]="player.id" [disabled]="selectedByAnotherPlayer($index, player.id)">{{ player.name }}</option>
+            }
+          </select>
+        }
+      </label>
+      @if (!playerIds[$index]) {
+        <input
+          [(ngModel)]="playerNames[$index]"
+          maxlength="50"
+          [attr.aria-label]="('Player {{number}} name' | translate:{ number: $index + 1 })">
+      } @else {
+        <strong class="selected-player-name">{{ playerNames[$index] }}</strong>
+      }
+    </div>
+    @if ($index === 0) { <span>{{ 'versus' | translate }}</span> }
+  }
 </section>
 
 <fieldset class="expedition-mode" [attr.aria-label]="'Lost Cities version' | translate">

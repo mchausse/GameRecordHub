@@ -3,14 +3,23 @@ rules_version = '2';
 // Prototype data model:
 // users/{uid}: private Firebase profile with uid, displayName (1-100), optional
 // email (<=254), optional HTTPS photoURL (<=2048), and immutable createdAt.
+// users/{uid}/players/{playerId}: private reusable player with ownerUid, a
+// name (1-50), and immutable createdAt.
 // users/{uid}/games/{gameId}: private immutable completed game with ownerUid,
-// bounded player names and round/total scores, a validated winner, and server
-// timestamps. Lost Cities requires 2 players/3 rounds; Sea Salt & Paper permits
-// 2-4 players and 1-20 manually entered rounds.
+// bounded player-name snapshots, stable player IDs or null for temporary
+// players, round/total scores, a validated winner, and server timestamps. Lost
+// Cities requires 2 players/3 rounds; Sea Salt & Paper permits 2-4 players and
+// 1-20 manually entered rounds.
 service cloud.firestore {
   match /databases/{database}/documents {
     function isAuthenticated() { return request.auth != null; }
     function isOwner(uid) { return isAuthenticated() && request.auth.uid == uid; }
+    function uidUnchanged(uid) {
+      return request.resource.data.ownerUid == uid;
+    }
+    function uidNotModified() {
+      return request.resource.data.ownerUid == resource.data.ownerUid;
+    }
     function isValidUser(data, uid) {
       return data.keys().hasOnly(['uid','displayName','email','photoURL','createdAt','updatedAt'])
         && data.keys().hasAll(['uid','displayName','email','photoURL','createdAt','updatedAt'])
@@ -23,6 +32,28 @@ service cloud.firestore {
         && data.createdAt is timestamp
         && data.updatedAt is timestamp && data.updatedAt == request.time;
     }
+    function isValidPlayer(data, uid) {
+      return data.keys().hasOnly(['ownerUid','name','createdAt','updatedAt'])
+        && data.keys().hasAll(['ownerUid','name','createdAt','updatedAt'])
+        && uidUnchanged(uid)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 50
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+    function isValidPlayerReference(uid, playerIds, index) {
+      return playerIds[index] == null
+        || (playerIds[index] is string
+          && playerIds[index].size() >= 1
+          && playerIds[index].size() <= 128
+          && exists(/databases/$(database)/documents/users/$(uid)/players/$(playerIds[index])));
+    }
+    function isValidPlayerIdList(playerIds, playerCount, uid) {
+      return playerIds is list && playerIds.size() == playerCount
+        && isValidPlayerReference(uid, playerIds, 0)
+        && isValidPlayerReference(uid, playerIds, 1)
+        && (playerCount < 3 || isValidPlayerReference(uid, playerIds, 2))
+        && (playerCount < 4 || isValidPlayerReference(uid, playerIds, 3));
+    }
     function isScorePair(score, minScore, maxScore) {
       return score is map
         && score.keys().hasOnly(['player1','player2'])
@@ -31,15 +62,19 @@ service cloud.firestore {
         && score.player2 is number && score.player2 >= minScore && score.player2 <= maxScore;
     }
     function isValidLostCitiesGame(data, uid) {
-      return data.keys().hasOnly(['ownerUid','gameSlug','expeditionCount','playerNames','roundScores','totals','winnerName','createdAt','completedAt'])
-        && data.keys().hasAll(['ownerUid','gameSlug','expeditionCount','playerNames','roundScores','totals','winnerName','createdAt','completedAt'])
+      return data.keys().hasOnly(['ownerUid','gameSlug','expeditionCount','playerNames','playerIds','roundScores','totals','winnerName','winnerPlayerId','createdAt','completedAt'])
+        && data.keys().hasAll(['ownerUid','gameSlug','expeditionCount','playerNames','playerIds','roundScores','totals','winnerName','winnerPlayerId','createdAt','completedAt'])
         && data.ownerUid == uid
         && data.gameSlug == 'lost-cities'
         && (data.expeditionCount == 5 || data.expeditionCount == 6)
         && data.playerNames is list && data.playerNames.size() == 2
         && data.playerNames[0] is string && data.playerNames[0].size() >= 1 && data.playerNames[0].size() <= 50
         && data.playerNames[1] is string && data.playerNames[1].size() >= 1 && data.playerNames[1].size() <= 50
+        && isValidPlayerIdList(data.playerIds, 2, uid)
         && (data.winnerName == 'Tie' || data.winnerName == data.playerNames[0] || data.winnerName == data.playerNames[1])
+        && ((data.totals.player1 == data.totals.player2 && data.winnerName == 'Tie' && data.winnerPlayerId == null)
+          || (data.totals.player1 > data.totals.player2 && data.winnerName == data.playerNames[0] && data.winnerPlayerId == data.playerIds[0])
+          || (data.totals.player2 > data.totals.player1 && data.winnerName == data.playerNames[1] && data.winnerPlayerId == data.playerIds[1]))
         && data.roundScores is list && data.roundScores.size() == 3
         && isScorePair(data.roundScores[0], data.expeditionCount == 5 ? -400 : -480, 1000)
         && isScorePair(data.roundScores[1], data.expeditionCount == 5 ? -400 : -480, 1000)
@@ -74,7 +109,11 @@ service cloud.firestore {
         && round.scores is list
         && round.scores.size() == playerCount
         && round.scores.size() >= 2
-        && round.scores.size() <= 4;
+        && round.scores.size() <= 4
+        && round.scores[0] is number && round.scores[0] >= 0 && round.scores[0] <= 2000
+        && round.scores[1] is number && round.scores[1] >= 0 && round.scores[1] <= 2000
+        && (playerCount < 3 || (round.scores[2] is number && round.scores[2] >= 0 && round.scores[2] <= 2000))
+        && (playerCount < 4 || (round.scores[3] is number && round.scores[3] >= 0 && round.scores[3] <= 2000));
     }
     function areValidSeaSaltRounds(rounds, playerCount) {
       return rounds is list && rounds.size() >= 1 && rounds.size() <= 20
@@ -100,11 +139,12 @@ service cloud.firestore {
         && (rounds.size() < 20 || isValidSeaSaltRound(rounds[19], playerCount));
     }
     function isValidSeaSaltPaperGame(data, uid) {
-      return data.keys().hasOnly(['ownerUid','gameSlug','playerNames','roundScores','totals','targetScore','winnerName','createdAt','completedAt'])
-        && data.keys().hasAll(['ownerUid','gameSlug','playerNames','roundScores','totals','targetScore','winnerName','createdAt','completedAt'])
+      return data.keys().hasOnly(['ownerUid','gameSlug','playerNames','playerIds','roundScores','totals','targetScore','winnerName','winnerPlayerId','createdAt','completedAt'])
+        && data.keys().hasAll(['ownerUid','gameSlug','playerNames','playerIds','roundScores','totals','targetScore','winnerName','winnerPlayerId','createdAt','completedAt'])
         && data.ownerUid == uid
         && data.gameSlug == 'sea-salt-paper'
         && isValidNameList(data.playerNames)
+        && isValidPlayerIdList(data.playerIds, data.playerNames.size(), uid)
         && areValidSeaSaltRounds(data.roundScores, data.playerNames.size())
         && isValidTotalList(data.totals, data.playerNames.size())
         && data.targetScore == (data.playerNames.size() == 2 ? 40 : (data.playerNames.size() == 3 ? 35 : 30))
@@ -115,6 +155,11 @@ service cloud.firestore {
           || data.winnerName == data.playerNames[1]
           || (data.playerNames.size() >= 3 && data.winnerName == data.playerNames[2])
           || (data.playerNames.size() == 4 && data.winnerName == data.playerNames[3]))
+        && ((data.winnerName == 'Tie' && data.winnerPlayerId == null)
+          || (data.winnerName == data.playerNames[0] && data.winnerPlayerId == data.playerIds[0])
+          || (data.winnerName == data.playerNames[1] && data.winnerPlayerId == data.playerIds[1])
+          || (data.playerNames.size() >= 3 && data.winnerName == data.playerNames[2] && data.winnerPlayerId == data.playerIds[2])
+          || (data.playerNames.size() == 4 && data.winnerName == data.playerNames[3] && data.winnerPlayerId == data.playerIds[3]))
         && data.createdAt is timestamp && data.createdAt == request.time
         && data.completedAt is timestamp && data.completedAt == request.time;
     }
@@ -126,6 +171,15 @@ service cloud.firestore {
       allow update: if isOwner(uid) && isValidUser(request.resource.data, uid)
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.uid == resource.data.uid;
+
+      match /players/{playerId} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidPlayer(request.resource.data, uid)
+          && request.resource.data.createdAt == request.time;
+        allow update: if isOwner(uid) && isValidPlayer(request.resource.data, uid)
+          && uidNotModified()
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
 
       match /games/{gameId} {
         allow read, delete: if isOwner(uid);

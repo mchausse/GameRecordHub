@@ -10,7 +10,28 @@
 
 <section class="name-row">
   @for (name of activeNames; track $index) {
-    <label>{{ 'Player {{number}}' | translate:{ number: $index + 1 } }}<input [ngModel]="name" (ngModelChange)="updateName($index, $event)" maxlength="50"></label>
+    <div class="player-choice">
+      <label>
+        {{ 'Player {{number}}' | translate:{ number: $index + 1 } }}
+        @if (auth.user() && savedPlayers().length > 0) {
+          <select [ngModel]="playerIds()[$index] ?? ''" (ngModelChange)="selectSavedPlayer($index, $event)">
+            <option value="">{{ 'Temporary player' | translate }}</option>
+            @for (player of savedPlayers(); track player.id) {
+              <option [value]="player.id" [disabled]="selectedByAnotherPlayer($index, player.id)">{{ player.name }}</option>
+            }
+          </select>
+        }
+      </label>
+      @if (!playerIds()[$index]) {
+        <input
+          [ngModel]="name"
+          (ngModelChange)="updateName($index, $event)"
+          maxlength="50"
+          [attr.aria-label]="'Player {{number}}' | translate:{ number: $index + 1 }">
+      } @else {
+        <strong class="selected-player-name">{{ name }}</strong>
+      }
+    </div>
   }
 </section>
 
