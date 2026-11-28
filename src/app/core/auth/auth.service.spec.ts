@@ -101,6 +101,17 @@ describe('AuthService', () => {
     expect(service.error()).toBeNull();
   });
 
+  it('reports QA email sign-in failures and clears busy state', async () => {
+    const service = TestBed.inject(AuthService);
+    (firebaseAuthApi.signInWithEmailAndPassword as jasmine.Spy)
+      .and.rejectWith(new FirebaseError('auth/invalid-credential', 'failed'));
+
+    await service.signInWithQaEmail('qa@example.com', 'bad-password');
+
+    expect(service.error()).toBe('Unable to sign in right now. Please try again.');
+    expect(service.busy()).toBeFalse();
+  });
+
   [
     ['auth/popup-closed-by-user', 'Sign-in was cancelled.'],
     ['auth/unauthorized-domain', 'This domain is not authorized for Google Sign-in.'],

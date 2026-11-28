@@ -13,8 +13,10 @@ describe('SeaSaltPaperComponent', () => {
   let records: jasmine.SpyObj<GameRecordsService>;
   let router: jasmine.SpyObj<Router>;
   let savedPlayers: jasmine.SpyObj<PlayersService>;
+  const authUser = signal<{ uid: string } | null>({ uid: 'test' });
 
   beforeEach(async () => {
+    authUser.set({ uid: 'test' });
     records = jasmine.createSpyObj<GameRecordsService>('GameRecordsService', ['saveSeaSaltPaperGame']);
     router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
     records.saveSeaSaltPaperGame.and.resolveTo('game-id');
@@ -31,7 +33,7 @@ describe('SeaSaltPaperComponent', () => {
         { provide: GameRecordsService, useValue: records },
         { provide: PlayersService, useValue: savedPlayers },
         { provide: Router, useValue: router },
-        { provide: AuthService, useValue: { user: signal({ uid: 'test' }), ready: Promise.resolve() } },
+        { provide: AuthService, useValue: { user: authUser, ready: Promise.resolve() } },
       ],
     }).compileComponents();
 
@@ -103,6 +105,27 @@ describe('SeaSaltPaperComponent', () => {
 
     expect(records.saveSeaSaltPaperGame).not.toHaveBeenCalled();
     expect(component.error()).toContain('only once');
+  });
+
+  it('supports temporary selection and handles saved-player load failures', async () => {
+    await component.ngOnInit();
+    component.selectSavedPlayer(0, 'ada');
+    expect(component.selectedByAnotherPlayer(1, 'ada')).toBeTrue();
+    component.selectSavedPlayer(0, '');
+    expect(component.playerNames()[0]).toBe('Player 1');
+
+    savedPlayers.list.and.rejectWith(new Error('failed'));
+    await component.ngOnInit();
+    expect(component.error()).toContain('Temporary names are still available');
+  });
+
+  it('does not load saved players while signed out', async () => {
+    savedPlayers.list.calls.reset();
+    authUser.set(null);
+
+    await component.ngOnInit();
+
+    expect(savedPlayers.list).not.toHaveBeenCalled();
   });
 
   it('updates names and normalizes non-finite scores to zero', () => {

@@ -12,8 +12,10 @@ describe('LostCitiesComponent', () => {
   let component: LostCitiesComponent;
   let records: jasmine.SpyObj<GameRecordsService>;
   let savedPlayers: jasmine.SpyObj<PlayersService>;
+  const authUser = signal<{ uid: string } | null>({ uid: 'test' });
 
   beforeEach(async () => {
+    authUser.set({ uid: 'test' });
     records = jasmine.createSpyObj<GameRecordsService>('GameRecordsService', ['saveLostCitiesGame']);
     records.saveLostCitiesGame.and.resolveTo('game-id');
     savedPlayers = jasmine.createSpyObj<PlayersService>('PlayersService', ['list']);
@@ -30,7 +32,7 @@ describe('LostCitiesComponent', () => {
         { provide: GameRecordsService, useValue: records },
         { provide: PlayersService, useValue: savedPlayers },
         { provide: Router, useValue: router },
-        { provide: AuthService, useValue: { user: signal({ uid: 'test' }), ready: Promise.resolve() } },
+        { provide: AuthService, useValue: { user: authUser, ready: Promise.resolve() } },
       ],
     }).compileComponents();
 
@@ -58,6 +60,32 @@ describe('LostCitiesComponent', () => {
       playerNames: ['Ada', 'Temporary'],
       playerIds: ['ada', null],
     }));
+  });
+
+  it('supports temporary selection, duplicate rejection, and player loading failures', async () => {
+    await component.ngOnInit();
+    component.selectSavedPlayer(0, 'ada');
+    expect(component.selectedByAnotherPlayer(1, 'ada')).toBeTrue();
+    component.selectSavedPlayer(0, '');
+    expect(component.playerNames[0]).toBe('Player 1');
+
+    component.playerIds[0] = 'ada';
+    component.playerIds[1] = 'ada';
+    await component.saveGame();
+    expect(component.error()).toContain('only once');
+
+    savedPlayers.list.and.rejectWith(new Error('failed'));
+    await component.ngOnInit();
+    expect(component.error()).toContain('Temporary names are still available');
+  });
+
+  it('keeps signed-out score entry independent from saved players', async () => {
+    savedPlayers.list.calls.reset();
+    authUser.set(null);
+
+    await component.ngOnInit();
+
+    expect(savedPlayers.list).not.toHaveBeenCalled();
   });
 
   it('applies the investment multiplier', () => {

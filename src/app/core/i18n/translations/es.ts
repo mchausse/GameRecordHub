@@ -14,7 +14,7 @@ export const ES: TranslationDictionary = {
   'Continue with Google': 'Continuar con Google',
   'QA sign-in': 'Acceso QA',
   'Email': 'Correo electrónico',
-  'Password': 'Contraseña',
+  'Password': 'Contraseña', // NOSONAR: translated label, not a credential
   'Sign in to QA': 'Acceder a QA',
   'Continue without an account — calculate scores only': 'Continuar sin cuenta — solo calcular puntuaciones',
   'Your records are private and belong to your account.': 'Tus registros son privados y pertenecen a tu cuenta.',
